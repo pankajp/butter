@@ -278,11 +278,11 @@ define( [
     }; //destroy
 
     this.hide = function() {
-      _rootElement.style.display = "none";
+      _mediaStatusContainer.style.display = _rootElement.style.display = "none";
     }; //hide
 
     this.show = function() {
-      _rootElement.style.display = "block";
+      _mediaStatusContainer.style.display = _rootElement.style.display = "block";
     }; //show
 
     function updateUI() {

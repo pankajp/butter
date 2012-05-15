@@ -53,14 +53,14 @@ define( [], function(){
       }
     });
 
-    function setNodePosition(){
+    function setNodePosition(forceUpdate){
       var duration = _media.duration,
           currentTime = _media.currentTime,
           tracksElement = _tracksContainer.element,
           scrollLeft = tracksElement.scrollLeft;
 
       // if we can avoid re-setting position and visibility, then do so
-      if( _lastTime !== currentTime || _lastScroll !== scrollLeft || _lastZoom !== _zoom ){
+      if( _lastTime !== currentTime || _lastScroll !== scrollLeft || _lastZoom !== _zoom || forceUpdate ){
 
         var pos = currentTime / duration * _tracksContainerWidth,
             adjustedPos = pos - scrollLeft;
@@ -209,6 +209,12 @@ define( [], function(){
     _media.listen( "mediapause", function( e ){
       if( !_isScrubbing ){
         _isPlaying = false;
+      }
+    });
+
+    butter.listen( "mediachanged", function( e ){
+      if(butter.currentMedia === _media){
+        setNodePosition(true);
       }
     });
 
