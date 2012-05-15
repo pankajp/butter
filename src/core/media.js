@@ -353,6 +353,10 @@
           },
           set: function( time ){
             if( time ){
+              if (time == Infinity) {
+                time = 300 * 60;
+                _logger.log( "couldn't detect duration, set to " + time);
+              }
               _duration = time;
               _logger.log( "duration changed to " + _duration );
               _this.dispatch( "mediadurationchanged", _this );
