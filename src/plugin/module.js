@@ -79,7 +79,7 @@
 
       var title = document.createElement( "div" );
       title.className = "title";
-      title.innerHTML = "<span>My Events</span>";
+      title.innerHTML = "<span>Events</span>";
       _container.appendChild( title );
       _listWrapper.appendChild( _listContainer );
       _container.appendChild( _listWrapper );
