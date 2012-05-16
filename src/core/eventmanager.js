@@ -116,6 +116,10 @@ define( [], function(){
   function __invoke( eventName, listeners, data ){
     var these, i;
 
+    if(Butter._log_event){
+      Butter._log_event(data);
+    }
+
     if( listeners[ eventName ] ){
       these = listeners[ eventName ].slice();
       i = these.length;
