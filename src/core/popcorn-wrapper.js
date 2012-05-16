@@ -91,13 +91,14 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
           _butterEventMap[ butterId ] = _popcorn.getLastTrackEventId();
 
           if( trackEvent.view ){
-            var popcornEvent = _popcorn.getTrackEvent( _butterEventMap[ butterId ] );
-            if( popcornEvent.toString ){
-              trackEvent.view.setToolTip( popcornEvent.toString() );
-            }
-            else{
-              trackEvent.view.setToolTip( JSON.stringify( options ) );
-            }
+            var upd = trackEvent.view.update(options);
+            if(upd.tooltip == undefined ){
+              var popcornEvent = _popcorn.getTrackEvent( _butterEventMap[ butterId ] );
+              if( popcornEvent.toString ){
+                trackEvent.view.setToolTip( popcornEvent.toString() );
+              } else {
+                trackEvent.view.setToolTip( JSON.stringify( options ) );
+            }}
           }
         } //if
       } //if

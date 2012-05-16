@@ -232,17 +232,31 @@ define( [
           start = _media.duration - 1;
       } //if
 
-      var defaultTarget = butter.defaultTarget;
+      var defaultTarget = track.target;
+      if( !defaultTarget && butter.defaultTarget ){
+        defaultTarget = butter.defaultTarget;
+      }
+
       if( !defaultTarget && butter.targets.length > 0 ){
         defaultTarget = butter.targets[ 0 ];
       } //if
 
+      var dur = 1;
+      if(Popcorn.manifest[type].view){
+        dur = Popcorn.manifest[type].view.duration;
+      }
+      var po = {
+        start: start,
+        end: start + dur,
+        target: defaultTarget.elementID,
+      };
+      Popcorn.forEach(Popcorn.manifest[type].options, function(opt, name){
+        if(['start','end','target'].indexOf(name) == -1 && opt.default != undefined){
+          po[name] = opt.default;
+        }
+      })
       var trackEvent = track.addTrackEvent({
-        popcornOptions: {
-          start: start,
-          end: start + 1,
-          target: defaultTarget.elementID
-        },
+        popcornOptions: po,
         type: type
       });
 

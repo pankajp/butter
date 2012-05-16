@@ -50,7 +50,22 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
       if ( !isNaN( options.end ) ) {
         _end = options.end;
       }
+
+      // set the display text of the view.
+      var text = Popcorn.manifest[_type].view && Popcorn.manifest[_type].view.text;
+      if(text){
+        if(text[0]=='='){
+          text = inputOptions[text.slice(1)];
+        } else if(text[0]=='`'){
+          text = (function(options){return eval(text.slice(1));})(inputOptions);
+        }
+      } else {
+        text = _type;
+      }
+      _typeElement.innerHTML = text;
+
       resetContainer();
+      return {'text':text};
     }; //update
 
     Object.defineProperties( this, {
@@ -86,6 +101,7 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
         set: function( val ){
           _type = val;
           _typeElement.innerHTML = _type;
+          this.update();
           _element.setAttribute( "data-butter-trackevent-type", _type );
         }
       },
@@ -164,12 +180,13 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
                 revert: true
               });
 
-              _resizable = DragNDrop.resizable( _element, {
-                containment: _parent.element.parentNode,
-                scroll: _parent.element.parentNode.parentNode,
-                stop: movedCallback
-              });
-
+              if(typeof Popcorn.manifest[trackEvent.type].options.end != 'undefined') {
+                _resizable = DragNDrop.resizable( _element, {
+                  containment: _parent.element.parentNode,
+                  scroll: _parent.element.parentNode.parentNode,
+                  stop: movedCallback
+                });
+              }
               _element.setAttribute( "data-butter-draggable-type", "trackevent" );
               _element.setAttribute( "data-butter-trackevent-id", trackEvent.id );
 
