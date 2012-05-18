@@ -116,6 +116,13 @@ define( [
         get: function(){
           return _trackEvents;
         }
+      },
+      defaultPlugin: {
+        enumerable: true,
+        configurable: false,
+        get: function(){
+          return options.defaultPlugin;
+        }
       }
     });
 
