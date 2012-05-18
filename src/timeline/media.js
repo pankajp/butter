@@ -47,8 +47,6 @@ define( [
         _rootElement = document.createElement( "div" ),
         _container = document.createElement( "div" ),
         _mediaStatusContainer = document.createElement( "div" ),
-        _trackliner,
-        _tracks = {},
         _selectedTracks = [],
         _hScrollBar = new Scrollbars.Horizontal( _tracksContainer ),
         _vScrollBar = new Scrollbars.Vertical( _tracksContainer ),
@@ -255,7 +253,7 @@ define( [
           po[name] = opt.default;
         }
       })
-      var trackEvent = track.addTrackEvent({
+      track.addTrackEvent({
         popcornOptions: po,
         type: type
       });
