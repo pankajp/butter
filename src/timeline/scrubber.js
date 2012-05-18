@@ -63,11 +63,19 @@ define( [], function(){
         var pos = currentTime / duration * _tracksContainerWidth,
             adjustedPos = pos - scrollLeft;
 
-        // If the node position is outside of the viewing window, hide it.
-        // Otherwise, show it and adjust its position.
+        // If the node position is outside of the viewing window because of
+        // change in the media seek position, move the scrubber back into view
         // Note the use of clientWidth here to account for padding/margin width fuzziness.
         if( pos < scrollLeft || pos - _lineWidth > _container.clientWidth + scrollLeft ){
-          _node.style.display = "none";
+          if(_lastTime !== currentTime && _lastScroll == scrollLeft && _lastZoom == _zoom){
+            // center the node into view if its moved out
+            adjustedPos = _container.clientWidth/2.0;
+            tracksElement.scrollLeft = pos - adjustedPos;
+            _node.style.left = adjustedPos + "px";
+            _node.style.display = "block";
+          } else {
+            _node.style.display = "none";
+          }
         }
         else {
           _node.style.left = adjustedPos + "px";
