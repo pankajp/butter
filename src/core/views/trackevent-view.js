@@ -184,7 +184,7 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
                 _resizable = DragNDrop.resizable( _element, {
                   containment: _parent.element.parentNode,
                   scroll: _parent.element.parentNode.parentNode,
-                  stop: movedCallback
+                  stop: resizedCallback
                 });
               }
               _element.setAttribute( "data-butter-draggable-type", "trackevent" );
@@ -216,8 +216,30 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
       var rect = _element.getClientRects()[ 0 ];
       _start = _element.offsetLeft / _zoom;
       _end = _start + rect.width / _zoom;
+      var _change = butter.currentTime - _start;
+      if ( Math.abs(_change) < 0.5) {
+        _start = butter.currentTime;
+        _end += _change;
+      }
       _this.dispatch( "trackeventviewupdated" );
     } //movedCallback
+
+    function resizedCallback() {
+      _element.style.top = "0px";
+      var rect = _element.getClientRects()[ 0 ];
+      _start = _element.offsetLeft / _zoom;
+      _end = _start + rect.width / _zoom;
+      var _change_start = butter.currentTime - _start;
+      var _change_end = butter.currentTime - _end;
+      if ( Math.abs(_change_start) < 0.5 || Math.abs(_change_end) < 0.5) {
+        if ( Math.abs(_change_start) < Math.abs(_change_end) ) {
+          _start = butter.currentTime;
+        } else {
+          _end = butter.currentTime;
+        }
+      }
+      _this.dispatch( "trackeventviewupdated" );
+    } //resizedCallback
 
     _element.className = "butter-track-event";
     _this.type = _type;
