@@ -85,6 +85,9 @@ define( [
       _media[ mediaObject.id ] = media;
       _parentElement.appendChild( media.element );
 
+      // media is not the currentMedia, hide it.
+      media.hide();
+
       function mediaChanged( event ){
         if ( _currentMedia !== _media[ event.data.id ] ){
           if ( _currentMedia ) {
