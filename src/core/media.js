@@ -63,6 +63,14 @@
               },
               ended: function(){
                 _this.dispatch( "mediaended" );
+              },
+              durationchange: function(){
+                console.log('media duration changed', this.duration());
+                _this.duration = this.duration();
+                if( _view ){
+                  _view.update();
+                }
+                _this.dispatch( "mediaready" );
               }
             },
             prepare: function(){
