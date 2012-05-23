@@ -217,7 +217,7 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
       _start = _element.offsetLeft / _zoom;
       _end = _start + rect.width / _zoom;
       var _change = butter.currentTime - _start;
-      if ( Math.abs(_change) < 0.5) {
+      if ( Math.abs(_change * _zoom) < 15) {
         _start = butter.currentTime;
         _end += _change;
       }
@@ -231,7 +231,7 @@ define( [ "core/logger", "core/eventmanager", "util/dragndrop" ], function( Logg
       _end = _start + rect.width / _zoom;
       var _change_start = butter.currentTime - _start;
       var _change_end = butter.currentTime - _end;
-      if ( Math.abs(_change_start) < 0.5 || Math.abs(_change_end) < 0.5) {
+      if ( Math.abs(_change_start * _zoom) < 15 || Math.abs(_change_end  * _zoom) < 15) {
         if ( Math.abs(_change_start) < Math.abs(_change_end) ) {
           _start = butter.currentTime;
         } else {
