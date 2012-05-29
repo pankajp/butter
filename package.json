@@ -1,6 +1,6 @@
 {
   "name": "butter",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": "The Mozilla Popcorn Team <web-made-movies-working@googlegroups.com>",
   "description": "The Popcorn authoring tool",
   "contributors": [
@@ -39,6 +39,26 @@
     {
       "name": "Ben Moskowitz",
       "email": "benrito@gmail.com"
+    },
+    {
+      "name": "David Humphrey",
+      "email": "david.humphrey@senecacollege.ca"
+    },
+    {
+      "name": "Jeremy Banks",
+      "email": "jeremy@jeremybanks.ca"
+    },
+    {
+      "name": "Brian Chirls",
+      "email": "brian@chirls.com"
+    },
+    {
+      "name": "James Burke",
+      "email": "jrburke@gmail.com"
+    },
+    {
+      "name": "Robert Stanica",
+      "email": "robertstanica@gmail.com"
     }
   ],
   "repository": {
@@ -53,7 +73,8 @@
     "express-browserid": "0.0.x",
     "config": "0.4.x",
     "mongoose": "2.5.x",
-    "stylus": "0.25.x"
+    "stylus": "0.25.x",
+    "csslint": "0.9.x"
   },
   "license": "MIT",
   "engine": {

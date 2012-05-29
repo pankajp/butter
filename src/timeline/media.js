@@ -11,7 +11,9 @@ define( [
           "./timebar",
           "./zoombar",
           "./status",
-          "./trackhandles"
+          "./trackhandles",
+          // Include util/lang so we have access to our classList shim for browsers that don't support it
+          "util/lang"
         ],
         function(
           TrackEvent,
@@ -22,10 +24,11 @@ define( [
           TimeBar,
           ZoomBar,
           Status,
-          TrackHandles ){
+          TrackHandles,
+          LangUtil ) {
 
-  var INITIAL_ZOOM = 100,
-      ZOOM_FACTOR = 100;
+  var MIN_ZOOM = 300,
+      DEFAULT_ZOOM = 0.5;
 
   function MediaInstance( butter, media ){
     function onTrackOrderChanged( orderedTracks ){
@@ -33,7 +36,7 @@ define( [
     } //onTrackOrderChanged
 
     function zoomCallback( zoomLevel ){
-      var nextZoom = ( 1 + zoomLevel ) * ZOOM_FACTOR;
+      var nextZoom = MIN_ZOOM * zoomLevel + _zoomFactor;
       if( nextZoom !== _zoom ){
         _zoom = nextZoom;
         _tracksContainer.zoom = _zoom;
@@ -49,7 +52,7 @@ define( [
         _mediaStatusContainer = document.createElement( "div" ),
         _selectedTracks = [],
         _hScrollBar = new Scrollbars.Horizontal( _tracksContainer ),
-        _vScrollBar = new Scrollbars.Vertical( _tracksContainer ),
+        _vScrollBar = new Scrollbars.Vertical( _tracksContainer, _rootElement ),
         _shrunken = false,
         _timebar = new TimeBar( butter, _media, _tracksContainer, _hScrollBar ),
         _zoombar = new ZoomBar( zoomCallback ),
@@ -57,7 +60,8 @@ define( [
         _trackHandles = new TrackHandles( butter, _media, _tracksContainer, onTrackOrderChanged ),
         _trackEventHighlight = butter.config.ui.trackEventHighlight || "click",
         _currentMouseDownTrackEvent,
-        _zoom = INITIAL_ZOOM;
+        _zoomFactor,
+        _zoom;
 
     EventManagerWrapper( _this );
 
@@ -66,6 +70,14 @@ define( [
     _container.className = "media-container";
 
     _mediaStatusContainer.className = "media-status-container";
+
+    function snapToCurrentTime(){
+      _tracksContainer.snapTo( _media.currentTime );
+      _hScrollBar.update();
+    }
+
+    _media.listen( "mediaplaying", snapToCurrentTime );
+    _media.listen( "mediapause", snapToCurrentTime );
 
     _media.listen( "trackeventselected", function( e ){
       _selectedTracks.push( e.target );
@@ -118,7 +130,8 @@ define( [
 
       _currentMouseDownTrackEvent = trackEvent;
 
-      if( trackEvent.selected === true && originalEvent.shiftKey && _selectedTracks.length > 1 ){
+      if( trackEvent.selected === true && originalEvent.shiftKey && _selectedTracks.length > 1  &&
+          !originalEvent.srcElement.classList.contains( "handle" ) ) {
         trackEvent.selected = false;
       }
       else {
@@ -139,7 +152,9 @@ define( [
     } //onTrackEventSelected
 
     function onMediaReady(){
-      _zoombar.update( 0 );
+      _zoomFactor = _container.clientWidth / _media.duration;
+      _zoom = DEFAULT_ZOOM;
+      _zoombar.zoom( _zoom );
       _tracksContainer.zoom = _zoom;
       updateUI();
       _this.dispatch( "ready" );
@@ -160,17 +175,6 @@ define( [
       _rootElement.appendChild( _zoombar.element );
       _rootElement.appendChild( _container );
 
-      _media.listen( "trackeventadded", function( e ){
-        var trackEvent = e.data;
-        trackEvent.view.listen( "trackeventdragstarted", onTrackEventDragStarted );
-        trackEvent.view.listen( "trackeventmouseup", onTrackEventMouseUp );
-        trackEvent.view.listen( "trackeventmousedown", onTrackEventMouseDown );
-        if( _trackEventHighlight === "hover" ){
-          trackEvent.view.listen( "trackeventmouseover", onTrackEventMouseOver );
-          trackEvent.view.listen( "trackeventmouseout", onTrackEventMouseOut );
-        } //if
-      });
-
       _media.listen( "trackeventremoved", function( e ){
         var trackEvent = e.data;
         trackEvent.view.unlisten( "trackeventdragstarted", onTrackEventDragStarted );
@@ -182,6 +186,17 @@ define( [
         } //if
       });
 
+      function onTrackEventAdded( e ){
+        var trackEvent = e.data;
+        trackEvent.view.listen( "trackeventdragstarted", onTrackEventDragStarted );
+        trackEvent.view.listen( "trackeventmouseup", onTrackEventMouseUp );
+        trackEvent.view.listen( "trackeventmousedown", onTrackEventMouseDown );
+        if( _trackEventHighlight === "hover" ){
+          trackEvent.view.listen( "trackeventmouseover", onTrackEventMouseOver );
+          trackEvent.view.listen( "trackeventmouseout", onTrackEventMouseOut );
+        }
+      }
+
       function onTrackAdded( e ){
         _vScrollBar.update();
         var track = e.data;
@@ -191,7 +206,15 @@ define( [
         if( _trackEventHighlight === "hover" ){
           track.view.listen( "trackeventmouseover", onTrackEventMouseOver );
           track.view.listen( "trackeventmouseout", onTrackEventMouseOut );
-        } //if
+        }
+
+        var existingEvents = track.trackEvents;
+        for( var i=0; i<existingEvents.length; ++i ){
+          onTrackEventAdded({
+            data: existingEvents[ i ]
+          });
+        }
+
       }
 
       var existingTracks = _media.tracks;
@@ -202,6 +225,7 @@ define( [
       }
 
       _media.listen( "trackadded", onTrackAdded );
+      _media.listen( "trackeventadded", onTrackEventAdded );
 
       _media.listen( "trackremoved", function( e ){
         _vScrollBar.update();

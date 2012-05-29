@@ -16,7 +16,9 @@
             "./modules",
             "./dependencies",
             "ui/ui",
-            "util/xhr"
+            "util/xhr",
+            "util/lang",
+            "text!default-config.json"
           ],
           function(
             EventManagerWrapper,
@@ -27,7 +29,9 @@
             Modules,
             Dependencies,
             UI,
-            XHR
+            XHR,
+            Lang,
+            DefaultConfigJSON
           ){
 
     var __guid = 0,
@@ -47,19 +51,25 @@
           _id = "Butter" + __guid++,
           _logger = new Logger( _id ),
           _page,
-          _config = {
-            ui: {},
-            icons: {},
-            dirs: {}
-          },
+          _config,
+          _defaultConfig,
           _defaultTarget,
           _this = this,
           _selectedEvents = [],
           _defaultPopcornScripts = {},
           _defaultPopcornCallbacks = {};
 
+      // We use the default configuration in src/default-config.json as
+      // a base, and override whatever the user provides in the
+      // butterOptions.config file.
+      try {
+        _defaultConfig = JSON.parse( DefaultConfigJSON );
+      } catch ( e) {
+        throw "Butter Error: unable to find or parse default-config.json";
+      }
+
       if ( butterOptions.debug !== undefined ) {
-        Logger.debug( butterOptions.debug );
+        Logger.enabled( butterOptions.debug );
       }
 
       EventManagerWrapper( _this );
@@ -278,6 +288,11 @@
       };
 
       this.clearProject = function(){
+        var allTrackEvents = this.orderedTrackEvents;
+
+        while( allTrackEvents.length > 0 ) {
+          allTrackEvents[0].track.removeTrackEvent( allTrackEvents[0] );
+        }
         while( _targets.length > 0 ){
           _this.removeTarget( _targets[ 0 ] );
         }
@@ -482,10 +497,10 @@
         },
         debug: {
           get: function() {
-            return Logger.debug();
+            return Logger.enabled();
           },
           set: function( value ) {
-            Logger.debug( value );
+            Logger.enabled( value );
           },
           enumerable: true
         }
@@ -497,59 +512,62 @@
             medias = scrapedObject.media;
 
         _page.prepare(function() {
-          var i, j, il, jl, url, oldTarget, oldMedia, mediaPopcornOptions, mediaObj;
-          for( i = 0, il = targets.length; i < il; ++i ) {
-            oldTarget = null;
-            if( _targets.length > 0 ){
-              for( j = 0, jl = _targets.length; j < jl; ++j ){
-                // don't add the same target twice
-                if( _targets[ j ].id === targets[ i ].id ){
-                  oldTarget = _targets[ j ];
-                  break;
-                } //if
-              } //for j
-            }
-
-            if( !oldTarget ){
-              _this.addTarget({ element: targets[ i ].id });
-            }
-          }
-
-          for( i = 0, il = medias.length; i < il; i++ ) {
-            oldMedia = null;
-            mediaPopcornOptions = null;
-            url = "";
-            mediaObj = medias[ i ];
-
-            if( mediaObj.getAttribute( "data-butter-source" ) ){
-              url = mediaObj.getAttribute( "data-butter-source" );
-            }
-            else if( [ "VIDEO", "AUDIO" ].indexOf( mediaObj.nodeName ) > -1 ) {
-              url = mediaObj.currentSrc;
-            }
-
-            if( _media.length > 0 ){
-              for( j = 0, jl = _media.length; j < jl; ++j ){
-                if( _media[ j ].id !== medias[ i ].id && _media[ j ].url !== url ){
-                  oldMedia = _media[ j ];
-                  break;
-                } //if
-              } //for
-            }
-            else{
-              if( _config.mediaDefaults ){
-                mediaPopcornOptions = _config.mediaDefaults;
+          if ( !!_config.scrapePage ) {
+            var i, j, il, jl, url, oldTarget, oldMedia, mediaPopcornOptions, mediaObj;
+            for( i = 0, il = targets.length; i < il; ++i ) {
+              oldTarget = null;
+              if( _targets.length > 0 ){
+                for( j = 0, jl = _targets.length; j < jl; ++j ){
+                  // don't add the same target twice
+                  if( _targets[ j ].id === targets[ i ].id ){
+                    oldTarget = _targets[ j ];
+                    break;
+                  } //if
+                } //for j
               }
-            } //if
 
-            if( !oldMedia ){
-              _this.addMedia({ target: medias[ i ].id, url: url, popcornOptions: mediaPopcornOptions });
+              if( !oldTarget ){
+                _this.addTarget({ element: targets[ i ].id });
+              }
             }
-          } //for
+
+            for( i = 0, il = medias.length; i < il; i++ ) {
+              oldMedia = null;
+              mediaPopcornOptions = null;
+              url = "";
+              mediaObj = medias[ i ];
+
+              if( mediaObj.getAttribute( "data-butter-source" ) ){
+                url = mediaObj.getAttribute( "data-butter-source" );
+              }
+              else if( [ "VIDEO", "AUDIO" ].indexOf( mediaObj.nodeName ) > -1 ) {
+                url = mediaObj.currentSrc;
+              }
+
+              if( _media.length > 0 ){
+                for( j = 0, jl = _media.length; j < jl; ++j ){
+                  if( _media[ j ].id !== medias[ i ].id && _media[ j ].url !== url ){
+                    oldMedia = _media[ j ];
+                    break;
+                  } //if
+                } //for
+              }
+              else{
+                if( _config.mediaDefaults ){
+                  mediaPopcornOptions = _config.mediaDefaults;
+                }
+              } //if
+
+              if( !oldMedia ){
+                _this.addMedia({ target: medias[ i ].id, url: url, popcornOptions: mediaPopcornOptions });
+              }
+            } //for
+          }
 
           if( callback ){
             callback();
           } //if
+          
           _this.dispatch( "pageready" );
         });
       }; //preparePage
@@ -629,30 +647,47 @@
         }
       };
 
-      function readConfig(){
-        var icons = _config.icons,
-            img,
-            resourcesDir = _config.dirs.resources || "";
+      function attemptDataLoad( finishedCallback ){
+        if ( _config.savedDataUrl ) {
 
-        _this.project.template = _config.name;
-        
-        //Add default if it doesn't exist
-        if ( icons && !icons[ 'default'] ) {
-          icons[ 'default' ] = 'popcorn-icon.png';
+          var xhr = new XMLHttpRequest(),
+              savedDataUrl = _config.savedDataUrl + "?noCache=" + Date.now(),
+              savedData;
+
+          xhr.open( "GET", savedDataUrl, false );
+
+          if( xhr.overrideMimeType ){
+            // Firefox generates a misleading "syntax" error if we don't have this line.
+            xhr.overrideMimeType( "application/json" );
+          }
+
+          // Deal with caching
+          xhr.setRequestHeader( "If-Modified-Since", "Fri, 01 Jan 1960 00:00:00 GMT" );
+          xhr.send( null );
+
+          if( xhr.status === 200 ){
+            try{
+              savedData = JSON.parse( xhr.responseText );
+            }
+            catch( e ){
+              _this.dispatch( "loaddataerror", "Saved data not formatted properly." );
+            }
+            _this.importProject( savedData );
+          }
+          else {
+            _logger.log( "Butter saved data not found: " + savedDataUrl );
+          }
         }
 
-        for( var identifier in icons ){
-          if( icons.hasOwnProperty( identifier ) ){
-            img = document.createElement( "img" );
-            img.src = resourcesDir + icons[ identifier ];
-            img.id = identifier + "-icon";
-            img.style.display = "none";
-            img.setAttribute( "data-butter-exclude", "true" );
-            // @secretrobotron: just attach this to the body hidden for now,
-            //                  so that it preloads if necessary
-            document.body.appendChild( img );
-          } //if
-        } //for
+        finishedCallback();
+      }
+
+      function readConfig( userConfig ){
+        // Overwrite default config options with user settings (if any).
+        userConfig = userConfig || {};
+        _config = Lang.defaults( userConfig, _defaultConfig );
+
+        _this.project.template = _config.name;
 
         //prepare modules first
         var moduleCollection = Modules( _this, _config ),
@@ -662,7 +697,7 @@
 
         _page = new Page( loader, _config );
 
-        _this.ui = new UI( _this, _config.ui );
+        _this.ui = new UI( _this, _config );
 
         _this.ui.load(function(){
           //prepare the page next
@@ -672,8 +707,10 @@
                 if( _config.snapshotHTMLOnReady ){
                   _page.snapshotHTML();
                 }
-                //fire the ready event
-                _this.dispatch( "ready", _this );
+                attemptDataLoad(function(){
+                  //fire the ready event
+                  _this.dispatch( "ready", _this );
+                });
               });
             });
           });
@@ -682,30 +719,34 @@
       } //readConfig
 
       if( butterOptions.config && typeof( butterOptions.config ) === "string" ){
-        var xhr = new XMLHttpRequest();
+        var xhr = new XMLHttpRequest(),
+          jsonConfig,
+          url = butterOptions.config + "?noCache=" + Date.now();
+
+        xhr.open( "GET", url, false );
         if( xhr.overrideMimeType ){
           // Firefox generates a misleading "syntax" error if we don't have this line.
           xhr.overrideMimeType( "application/json" );
         }
-        xhr.open( "GET", butterOptions.config, false );
+        // Deal with caching
+        xhr.setRequestHeader( "If-Modified-Since", "Fri, 01 Jan 1960 00:00:00 GMT" );
         xhr.send( null );
 
         if( xhr.status === 200 || xhr.status === 0 ){
           try{
-            _config = JSON.parse( xhr.responseText );
+            jsonConfig = JSON.parse( xhr.responseText );
           }
           catch( e ){
             throw new Error( "Butter config file not formatted properly." );
           }
-          readConfig();
+          readConfig( jsonConfig );
         }
         else{
           _this.dispatch( "configerror", _this );
         } //if
       }
       else {
-        _config = butterOptions.config;
-        readConfig();
+        readConfig( butterOptions.config );
       } //if
 
       this.page = _page;
@@ -713,6 +754,10 @@
     }
 
     Butter.instances = __instances;
+
+    // Butter will report a version, which is the git commit sha
+    // of the version we ship.  This happens in make.js's build target.
+    Butter.version = "@VERSION@";
 
     if ( window.Butter.__waiting ) {
       for ( var i=0, l=window.Butter.__waiting.length; i<l; ++i ) {

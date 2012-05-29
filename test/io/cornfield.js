@@ -8,94 +8,129 @@
 
   QUnit.config.reorder = false;
 
-  document.addEventListener( "DOMContentLoaded", function( e ){
+  document.addEventListener( "DOMContentLoaded", function( e ) {
     var b = new Butter({
-      config: "../../config/cornfield-test.conf",
-        ready: function( butter ){
+      config: "cornfield-test-config.json",
+        ready: function( butter ) {
+          var filename = "test" + Date.now(),
+              data = {
+                name: filename,
+                html: "herpderp",
+                data: { stuff: "derpherp" },
+                template: "pop"
+              },
+              stringedData = JSON.stringify( data );
+
           module( "Unauthenticated tests" );
 
-          asyncTest("Sync API", 1, function() {
-            equal(butter.cornfield.user(), null, 'Username is ""');
-            start();
+          test( "Sync API", 1, function() {
+            ok( !butter.cornfield.user(), "Username is undefined" );
           });
 
-          asyncTest("Async API", 4, function() {
-            butter.cornfield.logout(function(res) {
-              equal(res, true, "Cornfield server is active");
-            });
+          asyncTest( "Async API", 4, function() {
+            butter.cornfield.logout( function( res ) {
+              equal( res, true, "Cornfield server is active" );
 
-            butter.cornfield.list(function(res) {
-              deepEqual( res, { error: 'unauthorized' }, 'Not allowed to list files' );
-            });
+              butter.cornfield.list(function( res ) {
+                deepEqual( res, { error: "unauthorized" }, "Not allowed to list projects" );
 
-            butter.cornfield.pull("test1", function(res) {
-              deepEqual( JSON.parse(res), { error: 'unauthorized' }, 'Not allowed to get files' );
-            });
+                butter.cornfield.load( filename, function( res ) {
+                  deepEqual( res, { error: "unauthorized" }, "Not allowed to get projects" );
 
-            butter.cornfield.push("test1", "test1", function(res) {
-              deepEqual( res, { error: 'unauthorized' }, 'Not allowed to put files' );
-            });
+                  butter.cornfield.save( filename, stringedData, function( res ) {
+                    deepEqual( res, { error: "unauthorized" }, "Not allowed to save projects" );
 
-            setTimeout(function() {
+                    start();
+                  });
+                });
+              });
+            });
+          });
+
+          asyncTest( "/api/whoami", 1, function() {
+            butter.cornfield.whoami( function( res ) {
+              deepEqual( res, { error: "unauthorized" }, "Response is unauthorized" );
               start();
-            }, 500);
+            });
           });
 
           module( "Authentication tests" );
 
-          asyncTest("Login (user input needed)", 4, function() {
-            butter.cornfield.login(function(res) {
-              clearTimeout(failSafe);
-              ok(res, 'The login response has data');
-              equal(res.status, 'okay', 'Login status is "okay"');
-              ok(res.email, 'The login has an email: ' + res.email);
-              equal(res.email, butter.cornfield.user(), "Email is stored");
+          asyncTest( "Login (user input needed)", 4, function() {
+            butter.cornfield.login( function( res ) {
+              clearTimeout( failSafe );
+              ok( res, "The login response has data" );
+              equal( res.status, "okay", "Login status is \"okay\"" );
+              ok( res.email, "The login has an email: " + res.email );
+              equal( res.email, butter.cornfield.user(), "Email is stored" );
               start();
             });
 
-            var failSafe = setTimeout(function() {
+            var failSafe = setTimeout( function() {
+              clearTimeout( failSafe );
               start();
-            }, 10000);
+            }, 20000 );
           });
 
           module( "Authenticated tests" );
 
-          asyncTest("Async API", 7, function() {
-            // Create a random filename we'll use for testing
-            var filename = "test" + Date.now();
+          asyncTest( "Async API", 7, function() {
+            var foundProject = false;
 
-            butter.cornfield.list(function(res){
-              ok(res, 'The file list response has data');
-              equal(res.error, 'okay', 'File list status is "okay"');
-              ok(res.filenames, 'There is a list of filenames');
-              equal(res.filenames.indexOf(filename), -1, filename + ' is not present in the file list');
+            butter.cornfield.list( function( res ) {
+              ok(res, "The project list response has data" );
+              equal( res.error, "okay", "Project list status is \"okay\"" );
+              ok( res.projects, "There is a list of projects" );
 
-              butter.cornfield.pull(filename, function(res){
-                deepEqual(JSON.parse(res), { error: 'file not found' }, 'The file pull response is file not found');
+              for( i = 0, len = res.projects.length; i < len; i++ ){
+                if( res.projects[ i ].name === filename ){
+                  foundProject = true;
+                  break;
+                }
+              }
 
-                butter.cornfield.push(filename, filename, function(res){
-                  deepEqual(res, { error: 'okay' }, 'The file push response is okay');
+              equal( false, foundProject, filename + " is not present in the projects list" );
 
-                  butter.cornfield.pull(filename, function(res){
-                    equal(res, filename, 'The file is the same');
-                  })
+              butter.cornfield.load( filename, function( res ) {
+                deepEqual( res, { error: "project not found" }, "The project load response is project not found" );
+
+                butter.cornfield.save( filename, stringedData, function( res ) {
+                  equal( res.error, "okay", "The project save response is okay" );
+
+                  filename = res.project._id;
+
+                  butter.cornfield.load( filename, function( res ) {
+                    deepEqual( JSON.parse( res.project ), data.data, "The project is the same" );
+
+                    start();
+                  });
                 });
               });
             });
 
-            setTimeout(function() {
+            var failSafe = setTimeout( function() {
+              clearTimeout( failSafe );
               start();
-            }, 1000);
+            }, 20000 );
           });
 
-          asyncTest("Logout", 1, function() {
-            butter.cornfield.logout(function(res) {
-              equal(res, true, "Clean-up");
-            });
-
-            setTimeout(function() {
+          asyncTest( "/api/whoami", 1, function() {
+            butter.cornfield.whoami( function( res ) {
+              deepEqual( res, {
+                email: butter.cornfield.user(),
+                name: butter.cornfield.user(),
+                username: butter.cornfield.user()
+              }, "Response contains user information" );
               start();
-            }, 500);
+            });
+          });
+
+          asyncTest( "Logout", 1, function() {
+            butter.cornfield.logout( function( res ) {
+              equal( res, true, "Clean-up" );
+
+              start();
+            });
           });
         }
     });
