@@ -5,8 +5,7 @@
 define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button", "./header" ],
         function( EventManagerWrapper, Toggler, LogoSpinner, ContextButton, Header ){
 
-  var TRANSITION_DURATION = 500,
-      BUTTER_CSS_FILE = "{css}/butter.ui.css";
+  var TRANSITION_DURATION = 500;
 
   function Area( id, element ){
     var _element,
@@ -133,23 +132,9 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
 
     this.load = function( onReady ){
       if( options.ui.enabled !== false ){
-        butter.loader.load(
-          [
-            {
-              type: "css",
-              url: BUTTER_CSS_FILE
-            }
-          ],
-          function(){
-            // icon preloading needs css to be loaded first
-            loadIcons( options.icons, options.dirs.resources || "" );
-            onReady();
-          }
-        );
+          loadIcons( options.icons, options.dirs.resources || "" );
       }
-      else{
-        onReady();
-      }
+      onReady();
     };
 
     this.registerStateToggleFunctions = function( state, events ){
