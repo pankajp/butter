@@ -3,7 +3,8 @@ define( [ "ui/page-element", "ui/logo-spinner", "util/lang", "ui/widget/textbox"
 
   var DEFAULT_SUBTITLE = "Supports HTML5 video, YouTube, and Vimeo",
       MOUSE_OUT_DURATION = 300,
-      MAX_URLS = 4;
+      MAX_URLS = 4,
+      MEDIA_ELEMENT_SAFETY_POLL_INTERVAL = 500;
 
   return function( media, options ){
     var _media = media,
@@ -227,7 +228,14 @@ define( [ "ui/page-element", "ui/logo-spinner", "util/lang", "ui/widget/textbox"
     }
 
     this.update = function(){
-      updateURLS();
+      // There is an edge-case where currentSrc isn't set yet, but everything else about the video is valid.
+      // So, here, we wait for it to be set.
+      // See end of core/media.js
+      var safetyInterval = setInterval(function(){
+        if( media.url !== undefined ){
+          updateURLS();
+          clearInterval( safetyInterval );
+        }}, MEDIA_ELEMENT_SAFETY_POLL_INTERVAL);
 
       var targetElement = document.getElementById( _media.target );
 
