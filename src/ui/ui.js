@@ -88,12 +88,13 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
   var NUDGE_INCREMENT_SMALL = 0.25,
       NUDGE_INCREMENT_LARGE = 1;
 
-  function UI( butter, options ){
+  function UI( butter ){
 
     var _areas = {},
         _contentState = [],
         _state = true,
         _logoSpinner,
+        uiConfig = butter.config,
         _this = this;
 
     EventManagerWrapper( _this );
@@ -121,7 +122,7 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
     _element.appendChild( _areas.work.element );
     _element.appendChild( _areas.tools.element );
 
-    if( options.ui.enabled !== false ){
+    if( uiConfig.value( "ui" ).enabled !== false ){
       document.body.classList.add( "butter-header-spacing" );
       document.body.classList.add( "butter-tray-spacing" );
       document.body.appendChild( _element );
@@ -131,8 +132,8 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
     }
 
     this.load = function( onReady ){
-      if( options.ui.enabled !== false ){
-          loadIcons( options.icons, options.dirs.resources || "" );
+      if( uiConfig.value( "ui" ).enabled !== false ){
+          loadIcons( uiConfig.value( "icons" ), uiConfig.value( "dirs" ).resources || "" );
       }
       onReady();
     };
@@ -236,12 +237,12 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
             _state = val;
             if( _state ){
               document.body.classList.remove( "minimized" );
-              _element.setAttribute( "ui-state", "visible" );
+              _element.setAttribute( "data-ui-state", "visible" );
               _this.dispatch( "uivisibilitychanged", true );
             }
             else {
               document.body.classList.add( "minimized" );
-              _element.setAttribute( "ui-state", "hidden" );
+              _element.setAttribute( "data-ui-state", "hidden" );
               _this.dispatch( "uivisibilitychanged", false );
             } //if
           } //if
@@ -292,6 +293,8 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
 
     var processKey = {
       32: function( e ) { // space key
+        e.preventDefault();
+
         if( butter.currentMedia.ended ){
           butter.currentMedia.paused = false;
         }
@@ -314,6 +317,11 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
         var track,
             trackEvent,
             nextTrack;
+
+        if ( butter.selectedEvents.length ) {
+          e.preventDefault();
+        }
+
         for( var i = 0, seLength = butter.selectedEvents.length; i < seLength; i++ ) {
           trackEvent = butter.selectedEvents[ i ];
           track = trackEvent.track;
@@ -339,6 +347,11 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
         var track,
             trackEvent,
             nextTrack;
+
+        if ( butter.selectedEvents.length ) {
+          e.preventDefault();
+        }
+
         for( var i = 0, seLength = butter.selectedEvents.length; i < seLength; i++ ) {
           trackEvent = butter.selectedEvents[ i ];
           track = trackEvent.track;
@@ -422,12 +435,12 @@ define( [ "core/eventmanager", "./toggler", "./logo-spinner", "./context-button"
       _this.visible = true;
       _toggler.visible = true;
       ContextButton( butter );
-      if( options.ui.enabled !== false ){
-        Header( butter, options );
+      if( uiConfig.value( "ui" ).enabled !== false ){
+        Header( butter, uiConfig );
       }
     });
 
-    _this.dialogDir = butter.config.dirs.dialogs || "";
+    _this.dialogDir = butter.config.value( "dirs" ).dialogs || "";
 
    } //UI
 

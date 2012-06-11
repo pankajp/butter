@@ -7,9 +7,15 @@
   var DEFAULT_TRACKEVENT_DURATION = 1,
       DEFAULT_TRACKEVENT_OFFSET = 0.01;
 
+  var ACCEPTED_UA_LIST = {
+    "Chrome": 17,
+    "Firefox": 10
+  };
+
   define( [
             "core/eventmanager",
             "core/logger",
+            "core/config",
             "core/target",
             "core/media",
             "core/page",
@@ -18,11 +24,14 @@
             "ui/ui",
             "util/xhr",
             "util/lang",
-            "text!default-config.json"
+            "text!default-config.json",
+            "text!layouts/ua-warning.html",
+            "util/shims"                  // keep this at the end so it doesn't need a spot in the function signature
           ],
           function(
             EventManagerWrapper,
             Logger,
+            Config,
             Target,
             Media,
             Page,
@@ -30,8 +39,9 @@
             Dependencies,
             UI,
             XHR,
-            Lang,
-            DefaultConfigJSON
+            LangUtils,
+            DefaultConfigJSON,
+            UAWarningLayout
           ){
 
     var __guid = 0,
@@ -41,7 +51,32 @@
       return new ButterInit( options );
     }; //Butter
 
+    Butter.showUAWarning = function() {
+      var uaWarningDiv = LangUtils.domFragment( UAWarningLayout );
+      document.body.appendChild( uaWarningDiv );
+      uaWarningDiv.classList.add( "slide-out" );
+      uaWarningDiv.getElementsByClassName( "close-button" )[0].onclick = function () {
+        document.body.removeChild( uaWarningDiv );
+      };
+    };
+
     function ButterInit( butterOptions ){
+
+      var ua = navigator.userAgent,
+          acceptedUA;
+      for ( var uaName in ACCEPTED_UA_LIST ) {
+        if( ACCEPTED_UA_LIST.hasOwnProperty( uaName ) ) {
+          var uaRegex = new RegExp( uaName + "/([0-9]+)\\.", "g" ),
+              match = uaRegex.exec( ua );
+          if ( match && match.length === 2 && Number( match[ 1 ] ) >= ACCEPTED_UA_LIST[ uaName ] ) {
+            acceptedUA = uaName + "/" + match[ 1 ];
+          }
+        }
+      }
+
+      if ( !acceptedUA ) {
+        Butter.showUAWarning();
+      }
 
       butterOptions = butterOptions || {};
 
@@ -63,7 +98,7 @@
       // a base, and override whatever the user provides in the
       // butterOptions.config file.
       try {
-        _defaultConfig = JSON.parse( DefaultConfigJSON );
+        _defaultConfig = Config.parse( DefaultConfigJSON );
       } catch ( e) {
         throw "Butter Error: unable to find or parse default-config.json";
       }
@@ -291,9 +326,10 @@
         var allTrackEvents = this.orderedTrackEvents;
 
         while( allTrackEvents.length > 0 ) {
-          allTrackEvents[0].track.removeTrackEvent( allTrackEvents[0] );
+          allTrackEvents[ 0 ].track.removeTrackEvent( allTrackEvents[ 0 ] );
         }
         while( _targets.length > 0 ){
+          _targets[ 0 ].destroy();
           _this.removeTarget( _targets[ 0 ] );
         }
         while( _media.length > 0 ){
@@ -512,7 +548,7 @@
             medias = scrapedObject.media;
 
         _page.prepare(function() {
-          if ( !!_config.scrapePage ) {
+          if ( !!_config.value( "scrapePage" ) ) {
             var i, j, il, jl, url, oldTarget, oldMedia, mediaPopcornOptions, mediaObj;
             for( i = 0, il = targets.length; i < il; ++i ) {
               oldTarget = null;
@@ -553,8 +589,8 @@
                 } //for
               }
               else{
-                if( _config.mediaDefaults ){
-                  mediaPopcornOptions = _config.mediaDefaults;
+                if( _config.value( "mediaDefaults" ) ){
+                  mediaPopcornOptions = _config.value( "mediaDefaults" );
                 }
               } //if
 
@@ -567,7 +603,7 @@
           if( callback ){
             callback();
           } //if
-          
+
           _this.dispatch( "pageready" );
         });
       }; //preparePage
@@ -581,7 +617,7 @@
       } //if
 
       var preparePopcornScriptsAndCallbacks = this.preparePopcornScriptsAndCallbacks = function( readyCallback ){
-        var popcornConfig = _config.popcorn || {},
+        var popcornConfig = _config.value( "popcorn" ) || {},
             callbacks = popcornConfig.callbacks,
             scripts = popcornConfig.scripts,
             toLoad = [],
@@ -648,10 +684,10 @@
       };
 
       function attemptDataLoad( finishedCallback ){
-        if ( _config.savedDataUrl ) {
+        if ( _config.value( "savedDataUrl" ) ) {
 
           var xhr = new XMLHttpRequest(),
-              savedDataUrl = _config.savedDataUrl + "?noCache=" + Date.now(),
+              savedDataUrl = _config.value( "savedDataUrl" ) + "?noCache=" + Date.now(),
               savedData;
 
           xhr.open( "GET", savedDataUrl, false );
@@ -672,6 +708,8 @@
             catch( e ){
               _this.dispatch( "loaddataerror", "Saved data not formatted properly." );
             }
+            _this.project.id = savedData.projectID;
+            _this.project.name = savedData.name;
             _this.importProject( savedData );
           }
           else {
@@ -684,10 +722,13 @@
 
       function readConfig( userConfig ){
         // Overwrite default config options with user settings (if any).
-        userConfig = userConfig || {};
-        _config = Lang.defaults( userConfig, _defaultConfig );
+        if( userConfig ){
+          _defaultConfig.merge( userConfig );
+        }
 
-        _this.project.template = _config.name;
+        _config = _defaultConfig;
+
+        _this.project.template = _config.value( "name" );
 
         //prepare modules first
         var moduleCollection = Modules( _this, _config ),
@@ -697,14 +738,14 @@
 
         _page = new Page( loader, _config );
 
-        _this.ui = new UI( _this, _config );
+        _this.ui = new UI( _this  );
 
         _this.ui.load(function(){
           //prepare the page next
           preparePopcornScriptsAndCallbacks(function(){
             preparePage(function(){
               moduleCollection.ready(function(){
-                if( _config.snapshotHTMLOnReady ){
+                if( _config.value( "snapshotHTMLOnReady" ) ){
                   _page.snapshotHTML();
                 }
                 attemptDataLoad(function(){
@@ -720,7 +761,7 @@
 
       if( butterOptions.config && typeof( butterOptions.config ) === "string" ){
         var xhr = new XMLHttpRequest(),
-          jsonConfig,
+          userConfig,
           url = butterOptions.config + "?noCache=" + Date.now();
 
         xhr.open( "GET", url, false );
@@ -734,12 +775,12 @@
 
         if( xhr.status === 200 || xhr.status === 0 ){
           try{
-            jsonConfig = JSON.parse( xhr.responseText );
+            userConfig = Config.parse( xhr.responseText );
           }
           catch( e ){
             throw new Error( "Butter config file not formatted properly." );
           }
-          readConfig( jsonConfig );
+          readConfig( userConfig );
         }
         else{
           _this.dispatch( "configerror", _this );

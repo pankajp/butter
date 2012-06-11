@@ -135,8 +135,19 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
         _onFail( e );
       }
 
+      // attempt to grab the first url for a type inspection
+      var firstUrl = url;
+      if ( typeof( url ) !== "string" ) {
+        if ( !url.length ) {
+          throw "URL is invalid: empty array or not a string.";
+        }
+        else {
+          firstUrl = url[ 0 ];
+        }
+      }
+
       // discover and stash the type of media as dictated by the url
-      findMediaType( url );
+      findMediaType( firstUrl );
 
       // if there isn't a target, we can't really set anything up, so stop here
       if( !target ){
@@ -223,19 +234,23 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
      * and create a stringified representation of the Popcorn constructor (usually to
      * insert in a script tag).
      */
-    var generatePopcornString = this.generatePopcornString = function( popcornOptions, url, target, method, callbacks, scripts ){
+    var generatePopcornString = this.generatePopcornString = function( popcornOptions, url, target, method, callbacks, scripts, trackEvents ){
 
       callbacks = callbacks || {};
       scripts = scripts || {};
 
       var popcornString = "",
-          trackEvents,
-          trackEvent,
           optionString,
           saveOptions,
           i,
-          l,
           option;
+
+      if ( typeof( url ) !== "string" ) {
+        url = JSON.stringify( url );
+      }
+      else {
+        url = "'" + url + "'";
+      }
 
       // prepare popcornOptions as a string
       if ( popcornOptions ) {
@@ -269,11 +284,11 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
       // special case for basePlayer, since it doesn't require as much of a harness
       if( _mediaType === "baseplayer" ) {
         popcornString +=  "Popcorn.player( 'baseplayer' );\n" +
-                          "var popcorn = Popcorn.baseplayer( '#" + target + "', " + popcornOptions + " );\n";
+                          "var popcorn = Popcorn.baseplayer( '#" + target + "' " + popcornOptions + " );\n";
       }
       else{
         // just try to use Popcorn.smart to detect/setup video
-        popcornString += "var popcorn = Popcorn.smart( '#" + target + "', '" + url + "'" + popcornOptions + " );\n";
+        popcornString += "var popcorn = Popcorn.smart( '#" + target + "', " + url + popcornOptions + " );\n";
       }
 
       if( scripts.beforeEvents ){
@@ -283,25 +298,18 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
         popcornString += callbacks.beforeEvents + "( popcorn );\n";
       }
 
-      // if popcorn was built successful
+      // if popcorn was built successfully
       if ( _popcorn ) {
 
-        // gather and serialize existing trackevents
-        trackEvents = _popcorn.getTrackEvents();
         if ( trackEvents ) {
-          for ( i=0, l=trackEvents.length; i<l; ++i ) {
-            trackEvent = trackEvents[ i ];
-            if( trackEvent._natives.manifest ) {
-              popcornOptions = trackEvent._natives.manifest.options;
-            } else {
-              popcornOptions = {};
-              _logger.log( "WARNING: There was no manifest for trackEvent:", trackEvent );
-            }
+          for ( i = trackEvents.length - 1; i >= 0; i-- ) {
+            popcornOptions = trackEvents[ i ].popcornOptions;
+          
             saveOptions = {};
             for ( option in popcornOptions ) {
               if ( popcornOptions.hasOwnProperty( option ) ) {
-                if (trackEvent[ option ] !== undefined) {
-                  saveOptions[ option ] = trackEvent[ option ];
+                if ( popcornOptions[ option ] !== undefined ) {
+                  saveOptions[ option ] = popcornOptions[ option ];
                 }
               }
             }
@@ -316,11 +324,13 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
             }
 
             if ( optionString ) {
-              popcornString += "popcorn." + trackEvents[ i ]._natives.type + "(" +
+              popcornString += "popcorn." + trackEvents[ i ].type + "(" +
                 optionString + ");\n";
             }
-          } //for trackEvents
-        } //if trackEvents
+
+          }
+
+        }
 
       }
 
@@ -455,6 +465,7 @@ define( [ "core/logger", "core/eventmanager" ], function( Logger, EventManager )
       if ( [ "AUDIO", "VIDEO" ].indexOf( container.nodeName ) > -1 ) {
         container.currentSrc = "";
         container.src = "";
+        container.removeAttribute( "src" );
       } //if
     };
 

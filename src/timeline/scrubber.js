@@ -106,7 +106,7 @@ define( [], function(){
     hScrollbar.listen( "scroll", setNodePosition );
 
     function onMouseUp( e ){
-      if( _isPlaying ){
+      if( _isPlaying || _isScrubbing ){
         _media.play();
         _isScrubbing = false;
       }

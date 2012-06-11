@@ -348,6 +348,37 @@
 
   });
 
+  asyncTest( "Trackevents use plugin defaults", 1, function() {
+
+    createButter(function( butter ) {
+      var te1,
+          m,
+          t;
+
+      butter.listen( "mediaready", function( e ) {
+        te1.update({
+          start: 5,
+          end: 6
+        });
+      });
+
+      butter.listen( "trackeventupdated", function( e ) {
+        equal( e.data.popcornOptions.text, "Popcorn.js", "Trackevent is given proper plugin defaults" );
+        start();
+      });
+
+      m = butter.addMedia({ url: "../external/popcorn-js/test/italia.ogg", target: "mediaDiv" }),
+      t = m.addTrack();
+
+      te1 = t.addTrackEvent({
+        name: "TrackEvent 1",
+        type: "text",
+        start: 0,
+        end: 1
+      });
+    });
+  });
+
   asyncTest( "Media objects have their own tracks", 4, function(){
 
     createButter( function( butter ){
@@ -625,12 +656,12 @@
     document.body.appendChild( el );
 
     createButter(function( butter ){
-      butter.config.scrapePage = true;
+      butter.config.value( "scrapePage", true );
       butter.preparePage(function(){
         ok( butter.media.length > 0 && butter.media[0].url === "http://www.youtube.com/watch?v=7glrZ4e4wYU", "URL match" );
         ok( document.getElementById( "strange-test-1" ), "New element exists" );
-        equals( document.getElementById( "strange-test-1" ).attributes.length, el.attributes.length, "has same attribute list length" );
-        equals( document.getElementById( "strange-test-1" ).getAttribute( "data-butter" ), "media", "has data-butter attribute" );
+        equals( document.getElementById( "strange-test-1" ).getAttribute( "data-butter-source" ), "http://www.youtube.com/watch?v=7glrZ4e4wYU", "has correct url" );
+        equals( document.getElementById( "strange-test-1" ).getAttribute( "data-butter" ), "media", "has correct data-butter attribute" );
         start();
       });
     });
@@ -647,11 +678,11 @@
           foo: 2
         }
       });
-      ok( m.generatePopcornString().indexOf( "{\"foo\":2}" ) > -1, "Popcorn string contained specified popcornOptions." );
+      ok( m.generatePopcornString().indexOf( "{\"foo\":2" ) > -1, "Popcorn string contained specified popcornOptions." );
       m.popcornOptions = {
         bar: 3
       };
-      ok( m.generatePopcornString().indexOf( "{\"bar\":3}" ) > -1, "Popcorn string contained specified popcornOptions again." );
+      ok( m.generatePopcornString().indexOf( "{\"bar\":3" ) > -1, "Popcorn string contained specified popcornOptions again." );
 
       start();
     });
@@ -666,7 +697,7 @@
       butter.listen( "mediaready", function( e ) {
         t1 = m1.addTrack();
         var messedUpString = "this'" + 'should"' + '""""""b"e' + "f'i'ne";
-        te1 = t1.addTrackEvent( { popcornOptions: { start: 0, end: 6, text: messedUpString, target: "stringSanity" }, type: "footnote" } );
+        te1 = t1.addTrackEvent( { popcornOptions: { start: 0, end: 6, text: messedUpString, target: "stringSanity" }, type: "text" } );
         butter.addTarget( { name: "beep" } );
 
         var func = Function( "", m1.generatePopcornString() );
@@ -696,7 +727,7 @@
             text: "OBVIOUS",
             target: "stringSanity"
           },
-          type: "footnote"
+          type: "text"
         });
 
         equals( butter.getHTML().match( "OBVIOUS" ).length, 1, "TrackEvent wasn't exported" );
@@ -885,12 +916,12 @@
           debug: false,
           ready: function( butter2 ){
 
-            ok( butter1.config.name !== butter2.config.name, "Config names are different" );
-            equal( butter2.config.name, "test-override-config", "Config name should be replaced." );
+            ok( butter1.config.value( "name" )  !== butter2.config.name, "Config names are different" );
+            equal( butter2.config.value( "name" ), "test-override-config", "Config name should be replaced." );
 
             // Test that things are otherwise the same for both specified and default config options.
-            deepEqual( butter1.config.plugin, butter2.config.plugin, "Config plugins are the same" );
-            deepEqual( butter1.config.dirs, butter2.config.dirs, "Config dirs are the same" );
+            deepEqual( butter1.config.value( "plugin" ), butter2.config.value( "plugin" ), "Config plugins are the same" );
+            deepEqual( butter1.config.value( "dirs" ), butter2.config.value( "dirs" ), "Config dirs are the same" );
 
             start();
 
@@ -920,8 +951,8 @@
     stop();
     createButter(function( butter ) {
       start();
-      var footnoteScripts = document.head.querySelectorAll( "script[src='" + butter.config.plugin.plugins[ 0 ].path + "']" );
-      equal( footnoteScripts.length, 1, "Footnote script was only loaded once" );
+      var textScripts = document.head.querySelectorAll( "script[src='" + butter.config.value( "plugin" ).plugins[ 0 ].path + "']" );
+      equal( textScripts.length, 1, "Text script was only loaded once" );
     });
   });
 })( window, window.document );

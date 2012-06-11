@@ -112,13 +112,18 @@
       this.popcornScripts = null;
 
       this.createView = function(){
-        _view = new MediaView( this, {
-          onDropped: onDroppedOnView
-        });
+        if ( !_view ) {
+          _view = new MediaView( this, {
+            onDropped: onDroppedOnView
+          });
+        }
       };
 
       this.destroy = function(){
         _popcornWrapper.unbind();
+        if ( _view ) {
+          _view.destroy();
+        }
       };
 
       this.clear = function(){
@@ -187,6 +192,7 @@
           _tracks.splice( idx, 1 );
           var events = track.trackEvents;
           for ( var i=0, l=events.length; i<l; ++i ) {
+            events[ i ].selected = false;
             track.dispatch( "trackeventremoved", events[ i ] );
           } //for
           _this.unchain( track, [
@@ -256,9 +262,21 @@
       };
 
       this.generatePopcornString = function( callbacks, scripts ){
+        var popcornOptions = _popcornOptions || {};
+
         callbacks = callbacks || _this.popcornCallbacks;
         scripts = scripts || _this.popcornScripts;
-        return _popcornWrapper.generatePopcornString( _popcornOptions, _url, _target, null, callbacks, scripts );
+
+        var collectedEvents = [];
+        for ( var i = 0, l = _tracks.length; i < l; ++i ) {
+          collectedEvents = collectedEvents.concat( _tracks[ i ].trackEvents );
+        }
+
+        /* TODO: determine if we need to turn on frameAnimation or not before calling generatePopcornString
+         * for now we default to off when exporting by setting frameAnimation to false. This should be handled in #1370.
+         */
+        popcornOptions.frameAnimation = false;
+        return _popcornWrapper.generatePopcornString( popcornOptions, _url, _target, null, callbacks, scripts, collectedEvents );
       };
 
       Object.defineProperties( this, {

@@ -12,8 +12,6 @@ define( [
           "./zoombar",
           "./status",
           "./trackhandles",
-          // Include util/lang so we have access to our classList shim for browsers that don't support it
-          "util/lang"
         ],
         function(
           TrackEvent,
@@ -24,8 +22,8 @@ define( [
           TimeBar,
           ZoomBar,
           Status,
-          TrackHandles,
-          LangUtil ) {
+          TrackHandles
+        ) {
 
   var MIN_ZOOM = 300,
       DEFAULT_ZOOM = 0.5;
@@ -50,7 +48,7 @@ define( [
         _rootElement = document.createElement( "div" ),
         _container = document.createElement( "div" ),
         _mediaStatusContainer = document.createElement( "div" ),
-        _selectedTracks = [],
+        _selectedTrackEvents = [],
         _hScrollBar = new Scrollbars.Horizontal( _tracksContainer ),
         _vScrollBar = new Scrollbars.Vertical( _tracksContainer, _rootElement ),
         _shrunken = false,
@@ -58,7 +56,7 @@ define( [
         _zoombar = new ZoomBar( zoomCallback ),
         _status = new Status( _media ),
         _trackHandles = new TrackHandles( butter, _media, _tracksContainer, onTrackOrderChanged ),
-        _trackEventHighlight = butter.config.ui.trackEventHighlight || "click",
+        _trackEventHighlight = butter.config.value( "ui" ).trackEventHighlight || "click",
         _currentMouseDownTrackEvent,
         _zoomFactor,
         _zoom;
@@ -80,11 +78,11 @@ define( [
     _media.listen( "mediapause", snapToCurrentTime );
 
     _media.listen( "trackeventselected", function( e ){
-      _selectedTracks.push( e.target );
+      _selectedTrackEvents.push( e.target );
     });
 
     _media.listen( "trackeventdeselected", function( e ){
-      _selectedTracks.splice( _selectedTracks.indexOf( e.target ), 1 );
+      _selectedTrackEvents.splice( _selectedTrackEvents.indexOf( e.target ), 1 );
     });
 
     function blinkTarget( target ){
@@ -130,24 +128,18 @@ define( [
 
       _currentMouseDownTrackEvent = trackEvent;
 
-      if( trackEvent.selected === true && originalEvent.shiftKey && _selectedTracks.length > 1  &&
-          !originalEvent.srcElement.classList.contains( "handle" ) ) {
-        trackEvent.selected = false;
+      trackEvent.selected = true;
+      if( !originalEvent.shiftKey ){
+        var tracks = _media.tracks;
+        for( var t in tracks ){
+          if( tracks.hasOwnProperty( t ) ){
+            tracks[ t ].deselectEvents( trackEvent );
+          } //if
+        } //for
+        butter.selectedEvents = [ trackEvent ];
       }
       else {
-        trackEvent.selected = true;
-        if( !originalEvent.shiftKey ){
-          var tracks = _media.tracks;
-          for( var t in tracks ){
-            if( tracks.hasOwnProperty( t ) ){
-              tracks[ t ].deselectEvents( trackEvent );
-            } //if
-          } //for
-          butter.selectedEvents = [ trackEvent ];
-        }
-        else {
-          butter.selectedEvents.push( trackEvent );
-        } //if
+        butter.selectedEvents.push( trackEvent );
       } //if
     } //onTrackEventSelected
 
