@@ -12,8 +12,8 @@
           ],
           function( Logger, EventManagerWrapper, Track, PopcornWrapper, MediaView ){
 
-    var MEDIA_ELEMENT_SAFETY_POLL_INTERVAL = 500,
-        MEDIA_ELEMENT_SAFETY_POLL_ATTEMPTS = 10;
+    var MEDIA_ELEMENT_SAFETY_POLL_INTERVAL = 10,
+        MEDIA_ELEMENT_SAFETY_POLL_ATTEMPTS = 100;
 
     var __guid = 0;
 
@@ -488,6 +488,7 @@
             }
             else if( attempts++ === MEDIA_ELEMENT_SAFETY_POLL_ATTEMPTS ){
               clearInterval( safetyInterval );
+              _logger.log('Media element safety poll attempts exceeded');
             }
           }, MEDIA_ELEMENT_SAFETY_POLL_INTERVAL );
         }

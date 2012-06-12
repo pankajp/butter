@@ -4,7 +4,8 @@ define( [ "ui/page-element", "ui/logo-spinner", "util/lang", "ui/widget/textbox"
   var DEFAULT_SUBTITLE = "Supports HTML5 video, YouTube, and Vimeo",
       MOUSE_OUT_DURATION = 300,
       MAX_URLS = 4,
-      MEDIA_ELEMENT_SAFETY_POLL_INTERVAL = 500;
+      MEDIA_ELEMENT_SAFETY_POLL_ATTEMPTS = 100,
+      MEDIA_ELEMENT_SAFETY_POLL_INTERVAL = 10;
 
   return function( media, options ){
     var _media = media,
@@ -235,7 +236,10 @@ define( [ "ui/page-element", "ui/logo-spinner", "util/lang", "ui/widget/textbox"
         if( media.url !== undefined ){
           updateURLS();
           clearInterval( safetyInterval );
-        }}, MEDIA_ELEMENT_SAFETY_POLL_INTERVAL);
+        } else if( attempts++ === MEDIA_ELEMENT_SAFETY_POLL_ATTEMPTS ){
+          clearInterval( safetyInterval );
+        }
+        }, MEDIA_ELEMENT_SAFETY_POLL_INTERVAL);
 
       var targetElement = document.getElementById( _media.target );
 
