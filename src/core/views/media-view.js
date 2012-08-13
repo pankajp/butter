@@ -232,6 +232,7 @@ define( [ "ui/page-element", "ui/logo-spinner", "util/lang", "ui/widget/textbox"
       // There is an edge-case where currentSrc isn't set yet, but everything else about the video is valid.
       // So, here, we wait for it to be set.
       // See end of core/media.js
+      var attempts = 0;
       var safetyInterval = setInterval(function(){
         if( media.url !== undefined ){
           updateURLS();

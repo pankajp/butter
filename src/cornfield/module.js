@@ -82,15 +82,15 @@ define(['util/xhr'], function(XHR) {
     };
 
     // Check to see if we're already logged in
-    butter.listen( "ready", function onMediaReady() {
-      butter.unlisten( "ready", onMediaReady );
-
-      butter.cornfield.whoami( function( response ) {
-        if ( !response.error ) {
-          butter.dispatch( "autologinsucceeded", response );
-        }
-      });
-    });
+//    butter.listen( "ready", function onMediaReady() {
+//      butter.unlisten( "ready", onMediaReady );
+//
+//      butter.cornfield.whoami( function( response ) {
+//        if ( !response.error ) {
+//          butter.dispatch( "autologinsucceeded", response );
+//        }
+//      });
+//    });
 
     this.email = function() {
       return email;
