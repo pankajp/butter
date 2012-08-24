@@ -21,7 +21,8 @@ define(['util/xhr'], function(XHR) {
       script.src = "https://browserid.org/include.js";
       script.type = "text/javascript";
       script.setAttribute( "data-butter-exclude", true );
-      document.head.appendChild( script );
+      // We are not using cornfield as of now.
+      //document.head.appendChild( script );
     }
 
     this.login = function(callback) {
